@@ -302,7 +302,18 @@ void CheckpointLoader<K, V>::InitPartNumAndLoadedParts(
       TensorShape key_shape;
       Status st = reader_->LookupTensorShape(tensor_key, &key_shape);
       if (!st.ok()) {
-        break;
+        // for slot variable like embedding_layer/uid_embedding/embedding_weights/Adagrad
+        // in parted checkpoint will be embedding_layer/uid_embedding/embedding_weights/part_0/Adagrad
+        size_t pos = restore_args_.m_name_string.find_last_of('/');
+        string primary_name = restore_args_.m_name_string.substr(0, pos);
+        string slot_name = restore_args_.m_name_string.substr(pos);
+        tensor_name = primary_name + "/" + kPartStr + part_id + slot_name;
+        tensor_key = tensor_name + tmp_key_suffix;
+        TensorShape key_shape;
+        Status st = reader_->LookupTensorShape(tensor_key, &key_shape);
+        if (!st.ok()) {
+          break;
+        }
       }
       tensor_name_vec.emplace_back(tensor_name);
     }
